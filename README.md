@@ -6,10 +6,11 @@ This project includes a RISC-V CPU with five stages. Five stages mean the Instru
 Execute (EX), Memory (MEM) and Write Back (WB).
 
 According to the requirement, we need to implement 7 instruction as follows:
-ADD
-SRA
-ORI
-LH——load half word
-SW——Store Word
-JAL
-BEQ
+
+1. ADD
+2. SRA
+3. ORI
+4. LH——load half word
+5. SW——Store Word
+6. JAL
+7. BEQ
