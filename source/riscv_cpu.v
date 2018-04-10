@@ -3,7 +3,7 @@
 `include "timescale.v"
 `include "define.h"
 
-module riscv_core
+module riscv_core 
 	(
 		clk_i,
 		rst_i,
@@ -108,16 +108,16 @@ riscv_decoder unit_decoder_ID(
         .memRd_en_o(ID_memRd_en)  // enable the data memory to read the data out; (High active)
 	);
 
-wire [`dw-1:0] ID_RegDate1;
-wire [`dw-1:0] ID_RegDate2;
+wire [`dw-1:0] ID_RegData1;
+wire [`dw-1:0] ID_RegData2;
 
-wire [`dw-1:0] ID_RegWrDate;
+wire [`dw-1:0] ID_RegWrData;
 wire [4:0] ID_RegWrAddr;
 //wire ID_RegWr_en;
 
 wire [`dw-1:0] WB_AluOut;
 wire [4:0] WB_RegRd;
-wire [`dw-1:0] WB_RegWrDate;
+wire [`dw-1:0] WB_RegWrData;
 wire WB_RegWr_en;
 
 
@@ -127,12 +127,12 @@ riscv_regfile unit_regfile_ID
             .clk_i(clk_i),
             .rst_i(rst_i),
             .RdIndex1_i(ID_RegRs1) ,   
-            .Data1_o(ID_RegDate1),   
+            .Data1_o(ID_RegData1),   
             .RdIndex2_i(ID_RegRs2),
-            .Data2_o(ID_RegDate2),
+            .Data2_o(ID_RegData2),
             /* Write to register file */
             .WrIndex_i(WB_RegRd),
-            .Data_i(WB_RegWrDate),   // The data writing into regfile 
+            .Data_i(WB_RegWrData),   // The data writing into regfile 
             .Wr_i(WB_RegWr_en)                // The write control
         );
 
@@ -141,8 +141,8 @@ riscv_regfile unit_regfile_ID
 riscv_bradecoder unit_bradecoder_ID(
         .Opcode_i(ID_opcode),  // The opcode from instruction
         .funct3_i(ID_Func3),  // The funct3 from instruction
-        .Regdata1_i(ID_RegDate1), //The rs1 data from regfile
-        .Regdata2_i(ID_RegDate2), //The rs2 data from regfile
+        .Regdata1_i(ID_RegData1), //The rs1 data from regfile
+        .Regdata2_i(ID_RegData2), //The rs2 data from regfile
         .Branch_en_o(ID_Branch_en), //The signal for jump and branch
         .PC_mux_sel_o(ID_PC_mux_sel) //selection signal for the pc_mux
     );
@@ -151,19 +151,19 @@ riscv_bradecoder unit_bradecoder_ID(
 reg [`dw-1:0] ID_operand1;
 reg [`dw-1:0] ID_operand2;
 
-always @(ID_Operand1_sel or ID_RegDate1)
+always @(ID_Operand1_sel or ID_RegData1)
     case(ID_Operand1_sel)
-        3'd0: ID_operand1 = ID_RegDate1;
+        3'd0: ID_operand1 = ID_RegData1;
         3'd1: ID_operand1 = ID_PCplus4;
-        default: ID_operand1 = ID_RegDate1;
+        default: ID_operand1 = ID_RegData1;
     endcase
     
-always @(ID_Operand2_sel or ID_Immediate or ID_RegDate2)
+always @(ID_Operand2_sel or ID_Immediate or ID_RegData2)
     case(ID_Operand2_sel)
-        3'd0: ID_operand2 = ID_RegDate2;
+        3'd0: ID_operand2 = ID_RegData2;
         3'd1: ID_operand2 = ID_Immediate;
         3'd2: ID_operand2 = `ZERO;
-        default: ID_operand2 = ID_RegDate2;
+        default: ID_operand2 = ID_RegData2;
     endcase
 
 //-------------------------------------
@@ -192,7 +192,7 @@ riscv_pipe #(5) IDEX_RegRd(.clk_i(clk_i), .rst_i(rst_i), .stall_i(IDEX_stall), .
 riscv_pipe IDEX_RegWr_en(.clk_i(clk_i), .rst_i(rst_i), .stall_i(IDEX_stall), .flush_i(IDEX_flush), .D_i(ID_RegWr_en), .Q_o(EX_RegWr_en));
 riscv_pipe IDEX_memWr_en(.clk_i(clk_i), .rst_i(rst_i), .stall_i(IDEX_stall), .flush_i(IDEX_flush), .D_i(ID_memWr_en), .Q_o(EX_memWr_en));
 riscv_pipe IDEX_memRd_en(.clk_i(clk_i), .rst_i(rst_i), .stall_i(IDEX_stall), .flush_i(IDEX_flush), .D_i(ID_memRd_en), .Q_o(EX_memRd_en));
-riscv_pipe #(`dw) IDEX_rs2_data(.clk_i(clk_i), .rst_i(rst_i), .stall_i(IDEX_stall), .flush_i(IDEX_flush), .D_i(ID_RegDate2), .Q_o(EX_rs2_data));
+riscv_pipe #(`dw) IDEX_rs2_data(.clk_i(clk_i), .rst_i(rst_i), .stall_i(IDEX_stall), .flush_i(IDEX_flush), .D_i(ID_RegData2), .Q_o(EX_rs2_data));
 
 //----------------------------
 // EX: Excution STAGE
@@ -226,7 +226,7 @@ wire [`dw-1:0] MEM_rs2_data;
 
 wire [`dw-1:0] MEM_AluOut;
 wire [4:0] MEM_RegRd;
-wire [`dw-1:0] MEM_RegWrDate;
+wire [`dw-1:0] MEM_RegWrData;
 wire MEM_RegWr_en;
 
 riscv_pipe #(`dw) EXMEM_AluOut(.clk_i(clk_i), .rst_i(rst_i), .stall_i(EXMEM_stall), .flush_i(EXMEM_flush), .D_i(EX_AluOut), .Q_o(MEM_AluOut));
@@ -269,7 +269,7 @@ riscv_pipe MEMWB_memRd_en(.clk_i(clk_i), .rst_i(rst_i), .stall_i(MEMWB_stall), .
 // WB: Write Back STAGE
 //------------------------------
 
-assign WB_RegWrDate = (WB_memRd_en)? WB_mem2reg : WB_AluOut; //select which data to write into regfile;
+assign WB_RegWrData = (WB_memRd_en)? WB_mem2reg : WB_AluOut; //select which data to write into regfile;
 
 
 //-------------------------------
