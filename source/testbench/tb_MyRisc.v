@@ -17,7 +17,7 @@ module test_MyRisc;
         rst = 1'b1;
         #70;
         rst = 1'b0;
-        #2000;
+        #5000;
         $stop;
     end
 

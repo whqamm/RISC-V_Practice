@@ -17,3 +17,4 @@
 `define aluop_nop	4'd0
 `define aluop_add	4'd1
 `define aluop_or	4'd2
+`define aluop_sra  4'd3

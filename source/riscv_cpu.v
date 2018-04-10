@@ -36,18 +36,32 @@ module riscv_core
 // IF: Instruction Fetch STAGE
 //-----------------------------
 wire [`dw-1:0] IF_PC;
-wire [`dw-1:0] IF_mux_pc;
 wire [`dw-1:0] IF_PCplus4;
+reg [`dw-1:0] IF_mux_pc;
+//////////
+wire ID_Branch_en;
+wire [1:0] ID_PC_mux_sel;
+wire [`dw-1:0] PC_plus_Imm;
 
-assign IF_mux_pc = IF_PCplus4; //TODO: This mux should add a selection.
+assign PC_plus_Imm = ID_PCplus4 + (ID_Immediate<<1);
+
+//assign IF_mux_pc = IF_PCplus4; //TODO: This mux should add a selection.
+always @(ID_PC_mux_sel, IF_PCplus4, PC_plus_Imm)
+    case(ID_PC_mux_sel)
+        2'b00 : IF_mux_pc = IF_PCplus4;
+        2'b01 : IF_mux_pc = PC_plus_Imm;
+        default: IF_mux_pc = IF_PCplus4;
+    endcase
 //TODO：注意根据取指是否有延迟，看波形行事。
+
+wire PC_stall;
 
 riscv_pc unit_pc_IF
     (
         .clk_i(clk_i), 
         .rst_i(rst_i), 
         .mux_pc_i(IF_mux_pc), 
-        .stall_i(IFID_stall), 
+        .stall_i(PC_stall), 
         .PC_o(IF_PC), 
         .PC4_o(IF_PCplus4)
       );
@@ -57,9 +71,9 @@ riscv_pc unit_pc_IF
 //-----------------------------	
 wire [`dw-1:0] ID_PC;
 wire [`dw-1:0] ID_inst;
-//wire [`dw-1:0] ID_PCplus4;
+wire [`dw-1:0] ID_PCplus4;
 
-riscv_pipe #(`dw) IFID_PC(.clk_i(clk_i), .rst_i(rst_i), .stall_i(IFID_stall), .flush_i(IFID_flush), .D_i(IF_PC), .Q_o(ID_PC));
+riscv_pipe #(`dw) IFID_PC(.clk_i(clk_i), .rst_i(rst_i), .stall_i(IFID_stall), .flush_i(IFID_flush), .D_i(IF_PCplus4), .Q_o(ID_PCplus4));
 riscv_pipe #(`dw) IFID_inst(.clk_i(clk_i), .rst_i(rst_i), .stall_i(IFID_stall), .flush_i(IFID_flush), .D_i(inst_in), .Q_o(ID_inst));
 
 //------------------------------
@@ -122,6 +136,17 @@ riscv_regfile unit_regfile_ID
             .Wr_i(WB_RegWr_en)                // The write control
         );
 
+//wire ID_Branch_en, ID_PC_mux_sel;
+
+riscv_bradecoder unit_bradecoder_ID(
+        .Opcode_i(ID_opcode),  // The opcode from instruction
+        .funct3_i(ID_Func3),  // The funct3 from instruction
+        .Regdata1_i(ID_RegDate1), //The rs1 data from regfile
+        .Regdata2_i(ID_RegDate2), //The rs2 data from regfile
+        .Branch_en_o(ID_Branch_en), //The signal for jump and branch
+        .PC_mux_sel_o(ID_PC_mux_sel) //selection signal for the pc_mux
+    );
+
 //Combinational logic for operand selection
 reg [`dw-1:0] ID_operand1;
 reg [`dw-1:0] ID_operand2;
@@ -129,6 +154,7 @@ reg [`dw-1:0] ID_operand2;
 always @(ID_Operand1_sel or ID_RegDate1)
     case(ID_Operand1_sel)
         3'd0: ID_operand1 = ID_RegDate1;
+        3'd1: ID_operand1 = ID_PCplus4;
         default: ID_operand1 = ID_RegDate1;
     endcase
     
@@ -136,6 +162,7 @@ always @(ID_Operand2_sel or ID_Immediate or ID_RegDate2)
     case(ID_Operand2_sel)
         3'd0: ID_operand2 = ID_RegDate2;
         3'd1: ID_operand2 = ID_Immediate;
+        3'd2: ID_operand2 = `ZERO;
         default: ID_operand2 = ID_RegDate2;
     endcase
 
@@ -153,7 +180,7 @@ wire [4:0] EX_RegRd;
 wire EX_RegWr_en;
 wire EX_memWr_en;
 wire EX_memRd_en;
-wire EX_rs2_data; // This data is used for store instruction
+wire [`dw-1:0] EX_rs2_data; // This data is used for store instruction
 
 riscv_pipe #(7) IDEX_opcode(.clk_i(clk_i), .rst_i(rst_i), .stall_i(IDEX_stall), .flush_i(IDEX_flush), .D_i(ID_opcode), .Q_o(EX_opcode));
 riscv_pipe #(3) IDEX_funct3(.clk_i(clk_i), .rst_i(rst_i), .stall_i(IDEX_stall), .flush_i(IDEX_flush), .D_i(ID_Func3), .Q_o(EX_Func3));
@@ -165,7 +192,7 @@ riscv_pipe #(5) IDEX_RegRd(.clk_i(clk_i), .rst_i(rst_i), .stall_i(IDEX_stall), .
 riscv_pipe IDEX_RegWr_en(.clk_i(clk_i), .rst_i(rst_i), .stall_i(IDEX_stall), .flush_i(IDEX_flush), .D_i(ID_RegWr_en), .Q_o(EX_RegWr_en));
 riscv_pipe IDEX_memWr_en(.clk_i(clk_i), .rst_i(rst_i), .stall_i(IDEX_stall), .flush_i(IDEX_flush), .D_i(ID_memWr_en), .Q_o(EX_memWr_en));
 riscv_pipe IDEX_memRd_en(.clk_i(clk_i), .rst_i(rst_i), .stall_i(IDEX_stall), .flush_i(IDEX_flush), .D_i(ID_memRd_en), .Q_o(EX_memRd_en));
-riscv_pipe IDEX_rs2_data(.clk_i(clk_i), .rst_i(rst_i), .stall_i(IDEX_stall), .flush_i(IDEX_flush), .D_i(ID_RegDate2), .Q_o(EX_rs2_data));
+riscv_pipe #(`dw) IDEX_rs2_data(.clk_i(clk_i), .rst_i(rst_i), .stall_i(IDEX_stall), .flush_i(IDEX_flush), .D_i(ID_RegDate2), .Q_o(EX_rs2_data));
 
 //----------------------------
 // EX: Excution STAGE
@@ -195,7 +222,7 @@ riscv_alu unit_alu_EX
 
 wire MEM_memWr_en;
 wire MEM_memRd_en;
-wire MEM_rs2_data;
+wire [`dw-1:0] MEM_rs2_data;
 
 wire [`dw-1:0] MEM_AluOut;
 wire [4:0] MEM_RegRd;
@@ -207,7 +234,7 @@ riscv_pipe #(5) EXMEM_RegRd(.clk_i(clk_i), .rst_i(rst_i), .stall_i(EXMEM_stall),
 riscv_pipe EXMEM_RegWr_en(.clk_i(clk_i), .rst_i(rst_i), .stall_i(EXMEM_stall), .flush_i(EXMEM_flush), .D_i(EX_RegWr_en), .Q_o(MEM_RegWr_en));
 riscv_pipe EXMEM_memWr_en(.clk_i(clk_i), .rst_i(rst_i), .stall_i(EXMEM_stall), .flush_i(EXMEM_flush), .D_i(EX_memWr_en), .Q_o(MEM_memWr_en));
 riscv_pipe EXMEM_memRd_en(.clk_i(clk_i), .rst_i(rst_i), .stall_i(EXMEM_stall), .flush_i(EXMEM_flush), .D_i(EX_memRd_en), .Q_o(MEM_memRd_en));
-riscv_pipe EXMEM_rs2_data(.clk_i(clk_i), .rst_i(rst_i), .stall_i(EXMEM_stall), .flush_i(EXMEM_flush), .D_i(EX_rs2_data), .Q_o(MEM_rs2_data));
+riscv_pipe #(`dw) EXMEM_rs2_data(.clk_i(clk_i), .rst_i(rst_i), .stall_i(EXMEM_stall), .flush_i(EXMEM_flush), .D_i(EX_rs2_data), .Q_o(MEM_rs2_data));
 //------------------------------
 // MEM: Memory STAGE
 //------------------------------
@@ -257,8 +284,9 @@ riscv_pipe_ctrl unit_riscv_pipe_ctrl(
             .EX_rd_i(EX_RegRd), .EX_RegWr_en(EX_RegWr_en),
             .MEM_rd_i(MEM_RegRd), .MEM_RegWr_en(MEM_RegWr_en),
             .WB_rd_i(WB_RegRd), .WB_RegWr_en(WB_RegWr_en),
-            /*Output*/
-            .IFID_stall_o(IFID_stall), .IDEX_stall_o(IDEX_stall), .EXMEM_stall_o(EXMEM_stall), .WB_stall_o(MEMWB_stall),
+            .ID_Branch_en_i(ID_Branch_en), .EX_opcode_i(EX_opcode),
+             /*Output*/
+            .PC_stall_o(PC_stall), .IFID_stall_o(IFID_stall), .IDEX_stall_o(IDEX_stall), .EXMEM_stall_o(EXMEM_stall), .WB_stall_o(MEMWB_stall),
             .IFID_flush_o(IFID_flush), .IDEX_flush_o(IDEX_flush), .EXMEM_flush_o(EXMEM_flush), .WB_flush_o(MEMWB_flush)
         );
 endmodule

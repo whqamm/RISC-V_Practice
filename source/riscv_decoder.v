@@ -62,23 +62,28 @@ module riscv_decoder
 	always @(Instruction_i)
 		case(Instruction_i[6:0])
 			7'b001_0011 : Immediate_o = {{20{Instruction_i[31]}},Instruction_i[31:20]}; //ORI
-			7'b000_0011 : Immediate_o = {{20{0}},Instruction_i[31:20]};  //LOAD
+			7'b000_0011 : Immediate_o = {{20{Instruction_i[31]}},Instruction_i[31:20]};  //LOAD
+			7'b010_0011 : Immediate_o = {{20{Instruction_i[31]}},Instruction_i[31:25],Instruction_i[11:7]};  //STORE
+			7'b110_1111 : Immediate_o = {{10{Instruction_i[31]}},Instruction_i[19:12],Instruction_i[20],Instruction_i[30:21],1'b0};  //JAL
+			7'b110_0011 : Immediate_o = {{19{Instruction_i[31]}},Instruction_i[31],Instruction_i[7],Instruction_i[30:25],Instruction_i[11:8],1'b0 };  //BEQ			
 			default: Immediate_o = `ZERO;
 		endcase
 	
 	always @(opcode_o)
         case(opcode_o)
-            default: Operand1_sel_o = 3'd0; //Operand1 is from RegFile
+            7'b110_1111 : Operand1_sel_o = 3'd1;  // This selection is for the JAL, Operand1 is PC_plus4.
+            default: Operand1_sel_o = 3'd0; //Operand1 come from RegFile
         endcase
         
 	always @(opcode_o)
         case(opcode_o)
-            7'b000_0011 : Operand2_sel_o = 3'd1; 
-            default: Operand2_sel_o = 3'd0; //Operand2 is from RegFile
+            7'b000_0011,7'b010_0011 : Operand2_sel_o = 3'd1; //Operand2 come from immediate
+            7'b110_1111 : Operand2_sel_o = 3'd2;  // This selection is for the JAL, Operand2 is zero.
+            default: Operand2_sel_o = 3'd0; //Operand2 come from RegFile
         endcase
 	
 	always @(opcode_o)
-	   case(opcode_o)
+	   case(opcode_o) //Regfile write back enable
 	       7'b001_0011 : RegWr_en_o = 1'b1; //ORI
 	       7'b011_0011 : RegWr_en_o = 1'b1; //ADD\SRA
 	       7'b110_1111 : RegWr_en_o = 1'b1; //JAL
