@@ -19,8 +19,6 @@ module riscv_decoder
 		//
 		Operand1_sel_o,  //selection for operand 1
 		Operand2_sel_o,  //selection for operand 2
-		data_mem_en_o,   //enable for data memory (Load/store)
-		data_mem_wr,      //write or read signal for data memory (0--write, 1--read)
 		memWr_en_o,  // enable the data memory to write the result in; (High active)
         memRd_en_o  // enable the data memory to read the data out; (High active)
 	);
@@ -40,13 +38,6 @@ module riscv_decoder
     output memRd_en_o;
 	reg memWr_en_o;
     reg memRd_en_o;
-	
-	
-    output data_mem_en_o;   //enable for data memory (Load/store)
-    output data_mem_wr;     //write or read signal for data memory (0--write, 1--read)
-    
-    reg data_mem_en_o;   //enable for data memory (Load/store)
-    reg data_mem_wr;     //write or read signal for data memory (0--write, 1--read)
 	
 	output [2:0] Operand1_sel_o; //selection for operand 1
     output [2:0] Operand2_sel_o;  //selection for operand 2
