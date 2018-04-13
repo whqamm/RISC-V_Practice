@@ -15,4 +15,3 @@ According to the requirement, we need to implement 7 instruction as follows:
 6. JAL
 7. BEQ
 
-Wang Huiquan
