@@ -23,7 +23,8 @@ module riscv_aluctrl
 			{3'b010,7'b000_0011} : AluCtl_o = `aluop_add; //LOAD
 			{3'b010,7'b010_0011} : AluCtl_o = `aluop_add; //STORE
 			{3'bxxx,7'b110_1111} : AluCtl_o = `aluop_add; //JAL
-			{3'b110,7'b001_0011} : AluCtl_o = `aluop_or;
+			{3'b110,7'b001_0011} : AluCtl_o = `aluop_or;  //ORI
+			{3'b101,7'b011_0011} : AluCtl_o = `aluop_sra;  //SRA
 			default	:	AluCtl_o = `aluop_nop;
 		endcase
 

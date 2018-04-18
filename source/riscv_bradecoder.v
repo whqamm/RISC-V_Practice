@@ -17,7 +17,7 @@ module riscv_bradecoder(
     input [`dw-1:0] Regdata2_i;
     
     output Branch_en_o;
-    output [1:0] PC_mux_sel_o; //00 -- PC = PC+4, 01 -- PC = PC+imm
+    output [1:0] PC_mux_sel_o; //00 -- PC = PC+4, 01 -- PC = PC+4+imm
     
     reg Branch_en_o;
     reg [1:0] PC_mux_sel_o;

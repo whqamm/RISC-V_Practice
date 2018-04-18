@@ -18,7 +18,7 @@ module riscv_core
 	);
 	
 	input clk_i, rst_i;
-	output [`dw-1:0] inst_in;
+	input [`dw-1:0] inst_in;
 	
 	output [`dw-1:0] inst_addr_o;
 	assign inst_addr_o = IF_PC;
@@ -151,7 +151,7 @@ riscv_bradecoder unit_bradecoder_ID(
 reg [`dw-1:0] ID_operand1;
 reg [`dw-1:0] ID_operand2;
 
-always @(ID_Operand1_sel or ID_RegData1)
+always @(ID_Operand1_sel or ID_RegData1 or ID_PCplus4 )
     case(ID_Operand1_sel)
         3'd0: ID_operand1 = ID_RegData1;
         3'd1: ID_operand1 = ID_PCplus4;

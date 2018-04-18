@@ -68,7 +68,7 @@ module riscv_decoder
         
 	always @(opcode_o)
         case(opcode_o)
-            7'b000_0011,7'b010_0011 : Operand2_sel_o = 3'd1; //Operand2 come from immediate
+            7'b000_0011,7'b010_0011, 7'b001_0011 : Operand2_sel_o = 3'd1; //Operand2 come from immediate, LOAD/STORE/ORI
             7'b110_1111 : Operand2_sel_o = 3'd2;  // This selection is for the JAL, Operand2 is zero.
             default: Operand2_sel_o = 3'd0; //Operand2 come from RegFile
         endcase

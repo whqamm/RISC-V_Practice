@@ -21,11 +21,16 @@ module riscv_alu
 	
 	wire [`dw-1:0] AluOut_o;
 	
-	always @(AluCtl_i, A_i, B_i)
+	wire [63:0] wAext; //used for SRA
+	reg [`dw-1:0] temp;
+	assign	wAext = {{32{A_i[`dw-1]}},A_i};    // Arithmetic
+	
+	always @(AluCtl_i, A_i, B_i,wAext)
 	begin
 		case (AluCtl_i)
 			`aluop_add	:	AluResult = A_i + B_i;
 			`aluop_or	:	AluResult = A_i | B_i;
+			`aluop_sra	:	{temp,AluResult} = wAext >> B_i[4:0];
 			default		:	AluResult = `ZERO;
 		endcase
 	end
