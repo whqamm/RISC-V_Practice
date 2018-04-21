@@ -29,7 +29,7 @@ module test_data_mem
 	begin
 		if (rst_i == `RESET_ON)
 		  begin
-		    rf_reg[0] <= 32'd2;
+		    rf_reg[0] <= 32'b10000000_00000000_00000000_00000010;
 		    //rf_reg[1] <= 32'b10000000_00000000_00000000_00001110; //used for test SRA
 		    rf_reg[1] <= 32'd12;
 			for (i = 2; i < `dw; i = i + 1)

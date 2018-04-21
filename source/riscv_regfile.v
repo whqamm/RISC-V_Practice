@@ -14,12 +14,15 @@ module riscv_regfile
 		RdIndex2_i		,   Data2_o         ,
 		/* Write to register file */
 		WrIndex_i		,	Data_i			,
-		Wr_i				// The write control
+		Wr_i,				// The write control
+		//For debug
+		Dbg_index_i,        Dbg_data_o
 	);
 
 	input [4:0]			RdIndex1_i		,
 						RdIndex2_i		,
-						WrIndex_i		;
+						WrIndex_i		,
+						Dbg_index_i     ;
 	/////////////////////////////////
 	input [`dw-1:0]		Data_i			;
 	input				Wr_i			;
@@ -27,7 +30,8 @@ module riscv_regfile
 	input				rst_i			;
 	
 	output [`dw-1:0]	Data1_o			,
-						Data2_o			;
+						Data2_o			,
+						Dbg_data_o      ;
 	
 /* --------------------------------------------------------------
 	registers, wires declaration
@@ -57,5 +61,6 @@ module riscv_regfile
 	// Read asynchronously from the register file
 	assign Data1_o = rf_reg[RdIndex1_i];
 	assign Data2_o = rf_reg[RdIndex2_i];
+	assign Dbg_data_o = rf_reg[Dbg_index_i];
 	
 endmodule

@@ -14,8 +14,16 @@ module riscv_core
         data_data_o, //The data to write into data memory
         data_data_i, //The data read from data memory
         data_Rd_en_o,
-        data_Wr_en_o
+        data_Wr_en_o,
+        Dbg_reg_index,
+        Dbg_reg_data
 	);
+	//The ports for debug
+	input [4:0] Dbg_reg_index;
+    output [31:0] Dbg_reg_data;
+	wire [4:0] Dbg_reg_index;
+    wire [31:0] Dbg_reg_data;
+	///////////////////////////////
 	
 	input clk_i, rst_i;
 	input [`dw-1:0] inst_in;
@@ -43,8 +51,8 @@ wire ID_Branch_en;
 wire [1:0] ID_PC_mux_sel;
 wire [`dw-1:0] PC_plus_Imm;
 
-assign PC_plus_Imm = ID_PCplus4 + (ID_Immediate<<1);
-
+//assign PC_plus_Imm = ID_PCplus4 + (ID_Immediate<<1);
+assign PC_plus_Imm = ID_PCplus4 + (ID_Immediate);
 //assign IF_mux_pc = IF_PCplus4; //TODO: This mux should add a selection.
 always @(ID_PC_mux_sel, IF_PCplus4, PC_plus_Imm)
     case(ID_PC_mux_sel)
@@ -133,7 +141,10 @@ riscv_regfile unit_regfile_ID
             /* Write to register file */
             .WrIndex_i(WB_RegRd),
             .Data_i(WB_RegWrData),   // The data writing into regfile 
-            .Wr_i(WB_RegWr_en)                // The write control
+            .Wr_i(WB_RegWr_en),                // The write control
+            //For debug
+            .Dbg_index_i(Dbg_reg_index),
+            .Dbg_data_o(Dbg_reg_data)
         );
 
 //wire ID_Branch_en, ID_PC_mux_sel;
@@ -229,12 +240,17 @@ wire [4:0] MEM_RegRd;
 wire [`dw-1:0] MEM_RegWrData;
 wire MEM_RegWr_en;
 
+wire [2:0] MEM_Func3;
+wire [6:0] MEM_Func7;
+
 riscv_pipe #(`dw) EXMEM_AluOut(.clk_i(clk_i), .rst_i(rst_i), .stall_i(EXMEM_stall), .flush_i(EXMEM_flush), .D_i(EX_AluOut), .Q_o(MEM_AluOut));
 riscv_pipe #(5) EXMEM_RegRd(.clk_i(clk_i), .rst_i(rst_i), .stall_i(EXMEM_stall), .flush_i(EXMEM_flush), .D_i(EX_RegRd), .Q_o(MEM_RegRd));
 riscv_pipe EXMEM_RegWr_en(.clk_i(clk_i), .rst_i(rst_i), .stall_i(EXMEM_stall), .flush_i(EXMEM_flush), .D_i(EX_RegWr_en), .Q_o(MEM_RegWr_en));
 riscv_pipe EXMEM_memWr_en(.clk_i(clk_i), .rst_i(rst_i), .stall_i(EXMEM_stall), .flush_i(EXMEM_flush), .D_i(EX_memWr_en), .Q_o(MEM_memWr_en));
 riscv_pipe EXMEM_memRd_en(.clk_i(clk_i), .rst_i(rst_i), .stall_i(EXMEM_stall), .flush_i(EXMEM_flush), .D_i(EX_memRd_en), .Q_o(MEM_memRd_en));
 riscv_pipe #(`dw) EXMEM_rs2_data(.clk_i(clk_i), .rst_i(rst_i), .stall_i(EXMEM_stall), .flush_i(EXMEM_flush), .D_i(EX_rs2_data), .Q_o(MEM_rs2_data));
+riscv_pipe #(3) EXMEM_funct3(.clk_i(clk_i), .rst_i(rst_i), .stall_i(EXMEM_stall), .flush_i(EXMEM_flush), .D_i(EX_Func3), .Q_o(MEM_Func3));
+riscv_pipe #(7) EXMEM_funct7(.clk_i(clk_i), .rst_i(rst_i), .stall_i(EXMEM_stall), .flush_i(EXMEM_flush), .D_i(EX_Func7), .Q_o(MEM_Func7));
 //------------------------------
 // MEM: Memory STAGE
 //------------------------------
@@ -259,17 +275,25 @@ assign data_Wr_en_o = MEM_memWr_en;
 //------------------------------
 wire [`dw-1:0] WB_mem2reg;
 
+wire [2:0] WB_Func3;
+wire [6:0] WB_Func7;
+
 riscv_pipe #(`dw) MEMWB_AluOut(.clk_i(clk_i), .rst_i(rst_i), .stall_i(MEMWB_stall), .flush_i(MEMWB_flush), .D_i(MEM_AluOut), .Q_o(WB_AluOut));
 riscv_pipe #(5) MEMWB_RegRd(.clk_i(clk_i), .rst_i(rst_i), .stall_i(MEMWB_stall), .flush_i(MEMWB_flush), .D_i(MEM_RegRd), .Q_o(WB_RegRd));
 riscv_pipe MEMWB_RegWr_en(.clk_i(clk_i), .rst_i(rst_i), .stall_i(MEMWB_stall), .flush_i(MEMWB_flush), .D_i(MEM_RegWr_en), .Q_o(WB_RegWr_en));
 riscv_pipe #(`dw) MEMWB_RegWr_data(.clk_i(clk_i), .rst_i(rst_i), .stall_i(MEMWB_stall), .flush_i(MEMWB_flush), .D_i(data_data_i), .Q_o(WB_mem2reg));
 riscv_pipe MEMWB_memRd_en(.clk_i(clk_i), .rst_i(rst_i), .stall_i(MEMWB_stall), .flush_i(MEMWB_flush), .D_i(MEM_memRd_en), .Q_o(WB_memRd_en));
+riscv_pipe #(3) MEMWB_funct3(.clk_i(clk_i), .rst_i(rst_i), .stall_i(MEMWB_stall), .flush_i(MEMWB_flush), .D_i(MEM_Func3), .Q_o(WB_Func3));
+riscv_pipe #(7) MEMWB_funct7(.clk_i(clk_i), .rst_i(rst_i), .stall_i(MEMWB_stall), .flush_i(MEMWB_flush), .D_i(MEM_Func7), .Q_o(WB_Func7));
 
 //------------------------------
 // WB: Write Back STAGE
 //------------------------------
+wire [`dw-1:0] WB_mem2reg_real;
 
-assign WB_RegWrData = (WB_memRd_en)? WB_mem2reg : WB_AluOut; //select which data to write into regfile;
+assign WB_mem2reg_real = (WB_Func3==3'b001) ? {{16{WB_mem2reg[15]}},WB_mem2reg[15:0]} : WB_mem2reg;
+
+assign WB_RegWrData = (WB_memRd_en)? WB_mem2reg_real : WB_AluOut; //select which data to write into regfile;
 
 
 //-------------------------------
